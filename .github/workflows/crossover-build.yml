@@ -1,0 +1,43 @@
+name: Build Deimos CO
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Verify Qt versions
+        shell: bash
+        run: |
+          uv run python -c "import PyQt6.QtCore as q; print('PyQt:', q.PYQT_VERSION_STR); print('Qt:', q.QT_VERSION_STR)"
+
+      - name: Build update helper
+        shell: bash
+        run: cargo build --release --manifest-path libs/updater/Cargo.toml
+
+      - name: Build wizpatch helper
+        shell: bash
+        run: cargo build --release --manifest-path libs/wizpatch/Cargo.toml
+
+      - name: Build Deimos
+        run: uv run --group dev pyinstaller --noconfirm --clean Deimos.spec
+
+      - name: Upload Deimos artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Deimos-CrossOver-Qt6.6.1
+          path: dist/Deimos.exe
